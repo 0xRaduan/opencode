@@ -70,6 +70,11 @@ export function Prompt(props: PromptProps) {
     return [
       { name: "return", action: "submit" },
       { name: "return", meta: true, action: "newline" },
+      // Remap undo/redo to avoid conflicting with ctrl-z suspend
+      { name: "z", ctrl: true, shift: true, action: "undo" },
+      { name: "z", meta: true, shift: true, action: "undo" },
+      { name: "y", ctrl: true, shift: true, action: "redo" },
+      { name: "y", meta: true, shift: true, action: "redo" },
       ...newlineBindings.map((binding) => ({
         name: binding.name,
         ctrl: binding.ctrl || undefined,
