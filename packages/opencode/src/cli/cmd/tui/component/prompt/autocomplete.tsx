@@ -60,7 +60,12 @@ export function Autocomplete(props: {
       return undefined
     }
 
-    return val
+    // Strip line reference patterns (e.g., :39 or :39-42) from file paths
+    // This allows pasted paths like @file.tsx:39-42 to match the file
+    const lineRefPattern = /:\d+(-\d+)?$/
+    const cleanedVal = val.replace(lineRefPattern, "")
+
+    return cleanedVal
   })
 
   function insertPart(text: string, part: PromptInfo["parts"][number]) {
@@ -326,6 +331,29 @@ export function Autocomplete(props: {
       limit: 10,
     })
     return result.map((arr) => arr.obj)
+  })
+
+  // Auto-dismiss autocomplete when no results are found
+  // This prevents the autocomplete from blocking submission when pasting file paths
+  createEffect(() => {
+    if (!store.visible || store.visible === "/") return
+    const currentOptions = options()
+    const currentFilter = filter()
+
+    // Only auto-dismiss if:
+    // 1. There's an active filter (user has typed/pasted something)
+    // 2. No options are available
+    // 3. Files are not currently loading
+    if (currentFilter && currentOptions.length === 0 && !files.loading) {
+      // Use a small timeout to avoid dismissing too eagerly during typing
+      const timer = setTimeout(() => {
+        // Double-check conditions before hiding
+        if (store.visible && filter() === currentFilter && options().length === 0) {
+          hide()
+        }
+      }, 300)
+      return () => clearTimeout(timer)
+    }
   })
 
   createEffect(() => {
