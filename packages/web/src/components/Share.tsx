@@ -262,6 +262,10 @@ export default function Share(props: { id: string; api: string; info: Session.In
         input: 0,
         output: 0,
         reasoning: 0,
+        cache: {
+          read: 0,
+          write: 0,
+        },
       },
     }
 
@@ -277,9 +281,6 @@ export default function Share(props: { id: string; api: string; info: Session.In
 
       if (msg.role === "assistant") {
         result.cost += msg.cost
-        result.tokens.input += msg.tokens.input
-        result.tokens.output += msg.tokens.output
-        result.tokens.reasoning += msg.tokens.reasoning
 
         result.models[`${msg.providerID} ${msg.modelID}`] = [msg.providerID, msg.modelID]
 
@@ -292,6 +293,17 @@ export default function Share(props: { id: string; api: string; info: Session.In
         }
       }
     }
+
+    // Use only the last assistant message's tokens (current context window)
+    const lastAssistant = msgs.findLast((x) => x.role === "assistant" && x.tokens.output > 0)
+    if (lastAssistant) {
+      result.tokens.input = lastAssistant.tokens.input
+      result.tokens.output = lastAssistant.tokens.output
+      result.tokens.reasoning = lastAssistant.tokens.reasoning
+      result.tokens.cache.read = lastAssistant.tokens.cache?.read || 0
+      result.tokens.cache.write = lastAssistant.tokens.cache?.write || 0
+    }
+
     return result
   })
 
@@ -405,11 +417,11 @@ export default function Share(props: { id: string; api: string; info: Session.In
                       )}
                     </li>
                     <li>
-                      <span data-element-label>Input Tokens</span>
+                      <span data-element-label>Context Input</span>
                       {data().tokens.input ? <span>{data().tokens.input}</span> : <span data-placeholder>&mdash;</span>}
                     </li>
                     <li>
-                      <span data-element-label>Output Tokens</span>
+                      <span data-element-label>Context Output</span>
                       {data().tokens.output ? (
                         <span>{data().tokens.output}</span>
                       ) : (
@@ -417,7 +429,7 @@ export default function Share(props: { id: string; api: string; info: Session.In
                       )}
                     </li>
                     <li>
-                      <span data-element-label>Reasoning Tokens</span>
+                      <span data-element-label>Context Reasoning</span>
                       {data().tokens.reasoning ? (
                         <span>{data().tokens.reasoning}</span>
                       ) : (
